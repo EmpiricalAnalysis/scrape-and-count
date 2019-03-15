@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 from wikipedia2 import (tokenize_words, remove_stop_words, lemmatize_words,
-                        cal_word_frequency, get_text_from_html,
+                        cal_word_frequency, get_text_from_html, remove_comments,
                         remove_unicode_chars, split_hyphenated_words,
                         lowercase_words, get_direct_descendant_text,
-                        get_screen_text, get_all_tag_names,
+                        get_screen_text, get_all_tag_names, clean_and_count,
                         get_text_from_tag_expanded, get_selected_tags)
 import pytest
 from bs4 import BeautifulSoup
-# from bs4.element import Comment
+from bs4.element import Comment
 import urllib
 import re
+from selenium import webdriver
 
 class TestWordCount(object):
 
@@ -310,25 +311,25 @@ class TestWordCount(object):
         texts = []
         selected_tags = get_selected_tags(soup)
         get_text_from_tag_expanded(soup.html, texts, selected_tags)
-        expected_list_of_text = [u'Python interpreters are available for many', 
-                                 u'operating systems', u'.', u'CPython', u', the', 
-                                 u'reference implementation', u'of Python, is', 
-                                 u'open source', u'software', u'[30]', 
-                                 u"and has a community-based development model, as do nearly all of Python's other implementations. Python and CPython are managed by the non-profit", u'Python Software Foundation', 
-                                 u'.', u'Python was conceived in the late 1980s', 
-                                 u'[31]', u'by', u'Guido van Rossum', u'at', 
-                                 u'Centrum Wiskunde & Informatica', 
-                                 u'(CWI) in the', u'Netherlands', 
-                                 u'as a successor to the', u'ABC language', 
-                                 u'(itself inspired by', u'SETL', u')', u'[32]', 
-                                 u', capable of', u'exception handling', 
-                                 u'and interfacing with the', u'Amoeba', 
-                                 u'operating system.', u'[7]', 
-                                 u'Its implementation began in December 1989.', 
-                                 u'[33]', u"Van Rossum's long influence on Python is reflected in the title given to him by the Python community:", 
-                                 u'Benevolent Dictator For Life', 
-                                 u'(BDFL) \xe2\u20ac\u201c  a post from which he gave himself permanent vacation on July 12, 2018.', 
-                                 u'[34]']
+        expected_list_of_text = [u'Python interpreters are available for many ', 
+                                 u'operating systems ', u'. ', u'CPython ', u', the ', 
+                                 u'reference implementation ', u'of Python, is ', 
+                                 u'open source ', u'software ', u'[30] ', 
+                                 u"and has a community-based development model, as do nearly all of Python's other implementations. Python and CPython are managed by the non-profit ", u'Python Software Foundation ', 
+                                 u'. ', u'Python was conceived in the late 1980s ', 
+                                 u'[31] ', u'by ', u'Guido van Rossum ', u'at ', 
+                                 u'Centrum Wiskunde & Informatica ', 
+                                 u'(CWI) in the ', u'Netherlands ', 
+                                 u'as a successor to the ', u'ABC language ', 
+                                 u'(itself inspired by ', u'SETL ', u') ', u'[32] ', 
+                                 u', capable of ', u'exception handling ', 
+                                 u'and interfacing with the ', u'Amoeba ', 
+                                 u'operating system. ', u'[7] ', 
+                                 u'Its implementation began in December 1989. ', 
+                                 u'[33] ', u"Van Rossum's long influence on Python is reflected in the title given to him by the Python community: ", 
+                                 u'Benevolent Dictator For Life ', 
+                                 u'(BDFL) \xe2\u20ac\u201c  a post from which he gave himself permanent vacation on July 12, 2018. ', 
+                                 u'[34] ']
         assert texts == expected_list_of_text
 
     def test_get_text_with_autocollapse(self):
@@ -339,7 +340,7 @@ class TestWordCount(object):
         get_text_from_tag_expanded(soup.html, texts, selected_tags)
         print("======== inside test function =========")
         print(texts)
-        expected_list_of_text = [u'Python', u'v', u't', u'e'] 
+        expected_list_of_text = [u'v ', u't ', u'e ', u'Python '] # [u'Python', u'v', u't', u'e'] 
         assert texts == expected_list_of_text
         assert 0
 
@@ -362,8 +363,22 @@ class TestWordCount(object):
         # 'https://google.com'
         ])
     def test_wiki_get_tags_w_expanded_func(self, url):
-        html = urllib.urlopen(url).read()
+        driver = webdriver.Firefox()
+        # driver = webdriver.Chrome()
+        driver.get(url)
+        html = driver.page_source
+
+# //ul[@class='featureList'   i[@class='icon-usd']
+        # for elem in driver.find_elements_by_class_name("interlanguage-link interwiki-af"):
+        #     print(elem)
+
+        # html = urllib.urlopen(url).read()
         soup = BeautifulSoup(html, 'html5lib')
+
+        with open("prettified_wiki_python.txt", "w") as textfile:
+            textfile.write(soup.prettify().encode('utf8'))
+
+        soup = remove_comments(soup)
         # texts = soup.findAll(text=True)
 
         # texts = get_screen_text(soup)
@@ -375,16 +390,6 @@ class TestWordCount(object):
             for text in texts:
                 f.write(text.encode('utf8'))
         print(len(texts))
-
-        # print("#################################")
-        # for elt in texts:
-        #     if ("software" in elt) | ("Software" in elt):
-        #         print(elt)
-        #         print(" ")
-        #     # match = re.search(r"(\w*)software(\w*)", elt)
-        #     # if match:
-        #     #     print match.group(1)
-        # print("#################################")
 
         text_str = u" ".join(t for t in texts if t != None)
 
@@ -424,22 +429,50 @@ class TestWordCount(object):
         # assert 0 
 
     def test_ignore_comments(self):
-        _str = '<div>      <!-- \nNewPP limit report\nParsed by mw1263\nCached time: 20190311165754--></div>'
+        _str = ('<div>' 
+               + '<p class="mw-empty-elt">'
+               + 'something'
+               + '</p>'
+               + '<!--'
+               + 'NewPP limit report'
+               + 'Parsed by mw1263'
+               + 'Cached time: 20190311165754'
+               + '--></div>')
         soup = BeautifulSoup(_str, "html5lib")
-        texts = get_screen_text(soup)
-        print(texts)
+        soup = remove_comments(soup)
+        # print(soup.prettify())
+        selected_tags = get_selected_tags(soup)
+        texts = []
+        get_text_from_tag_expanded(soup, texts, selected_tags)
+        # print(texts)
+        assert texts == [u'something ']
+
+# def test_if_else(n):
+#     if n > 0:
+#         if n < 10:
+#             return False
+#         else:
+#             return True
+#     else:
+#         return True
+
+# print(test_if_else(13))
+
+    def test_wiki_from_file_w_expanded_func(self):
+        with open("prettified_wiki_python_0.txt") as f:   # wikipedia_python.txt
+            content = f.readlines()
+        words_str = " ".join(content)
+        # driver = webdriver.Firefox()
+        # driver.get(url)
+        # html = driver.page_source
+
+        soup = BeautifulSoup(words_str, 'html5lib')
+
+        word, count = clean_and_count(soup)
+        print("word = {}".format(word))
+        print("count = {}".format(count))
+        assert word == "python"
+        assert count == 421
         assert 0
-
-def test_if_else(n):
-    if n > 0:
-        if n < 10:
-            return False
-        else:
-            return True
-    else:
-        return True
-
-print(test_if_else(13))
-
 
             

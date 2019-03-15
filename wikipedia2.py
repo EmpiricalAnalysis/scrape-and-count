@@ -15,6 +15,11 @@ def get_all_tag_names(soup):
         names.add(tag.name)
     return names
 
+def remove_comments(soup):
+    comments = soup.findAll(text=lambda text:isinstance(text, Comment))
+    [comment.extract() for comment in comments]
+    return soup
+
 def get_selected_tags(soup):
     tags = get_all_tag_names(soup) #[u'code', u'h2', u'h3', u'h1', u'meta', u'table', u'label', u'noscript', u'style', u'span', u'img', u'script', u'tr', u'tbody', u'li', u'html', u'th', u'sup', u'input', u'td', u'cite', u'body', u'head', u'form', u'ol', u'link', u'abbr', u'br', u'caption', u'a', u'b', u'wbr', u'i', u'title', u'q', u'p', u'div', u'ul']
     ignore_tags = ['style', 'script', 'head', 'meta', 'noscript'] 
@@ -63,27 +68,40 @@ def get_direct_descendant_text(soup, tag):
     return immediate_descendant_text
 
 def get_text_from_tag_expanded(tag, texts, selected_tags):
+    # print(tag.name)
+    if tag.name == "[document]":
+        tag = tag.html
     if tag.name in selected_tags:
         if isinstance(tag, type(None)): 
+            # print("tag {} is a NoneType object".format(tag))
             pass
         elif isinstance(tag, NavigableString):
-            texts.append(tag)
-            texts.append(" ")
+            # print("tag {} is a NavigableString".format(tag))
+            texts.append(tag + u' ')
+            # texts.append(" ")
         else:
+            # print(tag.contents)
             for child in tag.children:
+                # print(child.name)
+                # print("--------------------")
+                # print(child)
+                # print("====================")
                 if isinstance(child, NavigableString):
-                    texts.append(child)
-                    texts.append(" ")
+                    # print("child {} is a NavigableString".format(child))
+                    texts.append(child + u' ')
+                    # texts.append(" ")
                 elif isinstance(child, Comment):
+                    # print("child {} is a Comment".format(child))
                     pass
                 else:
                     if content_is_visible(child):
                         if (child.name == "table") and child.has_attr("class") and ("autocollapse" in child['class']):
                             tr_to_keep = child.tbody.find("tr")
-                            actual_list_of_text = get_screen_text(tr_to_keep)
-                            for elt in actual_list_of_text:
-                                texts.append(elt)
-                                texts.append(" ")
+                            # actual_list_of_text = get_screen_text(tr_to_keep)
+                            get_text_from_tag_expanded(tr_to_keep, texts, selected_tags)
+                            # for elt in actual_list_of_text:
+                            #     texts.append(elt)
+                            #     texts.append(" ")
                         else:
                             if child.contents != None:
                                 get_text_from_tag_expanded(child, texts, selected_tags)
@@ -249,6 +267,14 @@ def cal_word_frequency(stemmed_ascii):
         labels = np.array(labels)[indSort]
         values = np.array(values)[indSort]
 
+        try:
+            idx = labels.index("Afrikaans")
+            cnt = values[idx]
+            print("Afrikaans has been seen {} times".format(cnt))
+        except:
+            print("Afrikaans has not been seen")
+            pass
+
         # print(ascii_ls)
         # print(labels[0:10])
         # print(values[0:10])
@@ -279,7 +305,7 @@ def get_html_body(base_url):
         textfile.write(soup.prettify().encode('utf8'))
 
 base_url = "https://en.wikipedia.org/wiki/Python_(programming_language)"
-# get_html_body(base_url)
+get_html_body(base_url)
 
 def get_tags(base_url):
     r = requests.get(base_url)
@@ -301,3 +327,42 @@ def get_text(base_url):
     # return content
 
 # print(get_text(base_url))
+def clean_and_count(soup):
+    # soup = BeautifulSoup(html, 'html5lib')
+
+    # with open("prettified_wiki_python.txt", "w") as textfile:
+    #     textfile.write(soup.prettify().encode('utf8'))
+
+    soup = remove_comments(soup)
+    # texts = soup.findAll(text=True)
+
+    # texts = get_screen_text(soup)
+    texts = []
+    selected_tags = get_selected_tags(soup)
+    get_text_from_tag_expanded(soup.html, texts, selected_tags)
+    # print(texts)
+    # with open("texts.txt", "w") as f:
+    #     for text in texts:
+    #         f.write(text.encode('utf8'))
+    # print(len(texts))
+
+    text_str = u" ".join(t for t in texts if t != None)
+
+    ascii_text = remove_unicode_chars(text_str)
+    dehyphenated_text = split_hyphenated_words(ascii_text)
+    print("======== dehyphenated text =======")
+    # print(dehyphenated_text)
+    tokenized_clean = tokenize_words(dehyphenated_text)
+    # tokenized_clean = tokenize_words(ascii_text)
+    print("======== tokenized cleaned =======")
+    # print(tokenized_clean)
+    words_col = remove_stop_words(tokenized_clean)
+    print("======== words collection ========")
+    # print(words_col)
+    lowercased = lowercase_words(words_col)
+    # lemmatized = lemmatize_words(words_col)
+    # print("======== lemmatized ========")
+    # print(lemmatized)
+    word, count = cal_word_frequency(lowercased)
+
+    return word, count
