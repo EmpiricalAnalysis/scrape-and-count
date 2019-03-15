@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 from bs4.element import Comment
-from bs4 import NavigableString
+from bs4 import NavigableString, Comment
 import urllib 
 import requests
 import re
@@ -26,67 +26,67 @@ def get_selected_tags(soup):
 def get_screen_text(soup):
     all_visible_text = []
     tags = get_selected_tags(soup) 
-    # tags = get_tag_names(soup) #[u'code', u'h2', u'h3', u'h1', u'meta', u'table', u'label', u'noscript', u'style', u'span', u'img', u'script', u'tr', u'tbody', u'li', u'html', u'th', u'sup', u'input', u'td', u'cite', u'body', u'head', u'form', u'ol', u'link', u'abbr', u'br', u'caption', u'a', u'b', u'wbr', u'i', u'title', u'q', u'p', u'div', u'ul']
-    # ignore_tags = ['style', 'script', 'head', 'meta'] 
-    # for tag in ignore_tags:
-    #     if tag in tags:
-    #         tags.remove(tag)
     for tag in tags:
         all_visible_text = all_visible_text + get_direct_descendant_text(soup, tag)
     return all_visible_text
+
+def get_k_v(str_, split_by):
+    k, v = str_.split(split_by)
+    return k.strip(), v.strip()
+
+def content_is_visible(content):
+    visible = True
+    if content.has_attr("style"):
+        styles = content.attrs["style"]
+        if ";" in styles:
+            styles = content.attrs["style"].split(";")
+            for style in styles:
+                if ":" in style:
+                    # k,v = style.split(":")
+                    k, v = get_k_v(style, ":")
+                    if k == "display" and v == "none":
+                        visible = False
+        else:
+            if ":" in styles: 
+                    # k,v = styles.split(":")
+                    k, v = get_k_v(styles, ":")
+                    if k == "display" and v == "none":
+                        visible = False
+    return visible
 
 def get_direct_descendant_text(soup, tag):
     immediate_descendant_text = []
     contents = soup.findAll(tag)
     for content in contents:
-        immediate_descendant_text = immediate_descendant_text + [el for el in content.children if isinstance(el, NavigableString)]
+        if content_is_visible(content):
+            immediate_descendant_text = immediate_descendant_text + [el for el in content.children if isinstance(el, NavigableString)]
     return immediate_descendant_text
 
 def get_text_from_tag_expanded(tag, texts, selected_tags):
-    # print(tag)
-    # print(selected_tags)
     if tag.name in selected_tags:
-        # print("HERE!")
         if isinstance(tag, type(None)): 
-            # return (None, texts)
             pass
         elif isinstance(tag, NavigableString):
-            texts.append(tag.string)
-            # return (None, texts)
+            texts.append(tag)
+            texts.append(" ")
         else:
             for child in tag.children:
-                # print("examinging child {}".format(child.name))
                 if isinstance(child, NavigableString):
-                    # print(u"{} is a NavigableString\n".format(child))
-                    texts.append(child.string)
-                elif (child.name == "table") and child.has_attr("class") and ("autocollapse" in child['class']):
-                    # print("{} is a autocollapsed table\n".format(child.name))
-                    tr_to_keep = child.tbody.find("tr")
-
-                    # print("--------- tr_to_keep --------")
-                    # print(tr_to_keep)
-                    actual_list_of_text = get_screen_text(tr_to_keep)
-                    # print("=========== text from table ===========")
-                    # print(actual_list_of_text)
-                    # print("=========== texts before ===========")
-                    for elt in actual_list_of_text:
-                        texts.append(elt)
-                    # texts = texts + actual_list_of_text 
-                    # print("=========== texts after ===========")
-                    # print(texts)
-                # elif child.name == "a" and not child.has_attr("title"):
-                #     print("{} is an a tag without a title attribute\n".format(child.name)) 
-                #     continue
+                    texts.append(child)
+                    texts.append(" ")
+                elif isinstance(child, Comment):
+                    pass
                 else:
-                    # print("{} is a normal tag\n".format(child.name))
-                    if child.contents != None:
-                        get_text_from_tag_expanded(child, texts, selected_tags)
-                        # print("new_tag is {}".format(new_tag))
-            # return (None, texts)
-    # else:
-        # return (None, texts)
-
-
+                    if content_is_visible(child):
+                        if (child.name == "table") and child.has_attr("class") and ("autocollapse" in child['class']):
+                            tr_to_keep = child.tbody.find("tr")
+                            actual_list_of_text = get_screen_text(tr_to_keep)
+                            for elt in actual_list_of_text:
+                                texts.append(elt)
+                                texts.append(" ")
+                        else:
+                            if child.contents != None:
+                                get_text_from_tag_expanded(child, texts, selected_tags)
 
 
 def tag_visible(element):
@@ -174,7 +174,7 @@ def tokenize_words(unicode_removed):
     tokenyzed = word_tokenize(unicode_removed)
     # tokenyzed = tokenyzed.rstrip()
     tokenyzed_cleaned = [x.strip() for x in tokenyzed]
-    print(tokenyzed[0:5])
+    # print(tokenyzed[0:5])
     print(len(tokenyzed))
     # print(tokenyzed_cleaned)
     print(type(tokenyzed_cleaned))
@@ -201,16 +201,16 @@ def remove_stop_words(tokenyzed_cleaned):
     punc_free = [word for word in stop_free if word not in exclude]
 
     # print(punc_free)
-    print(len(punc_free))
-    print(punc_free[0:10])
-    print(type(punc_free))
+    # print(len(punc_free))
+    # print(punc_free[0:10])
+    # print(type(punc_free))
 
     ascii_ls =  punc_free # [x.encode('ascii','ignore').lower() for x in punc_free]
-    print(type(ascii_ls))
-    print(type(ascii_ls[0]))
-    print(len(ascii_ls))
-    print(ascii_ls[0:10])
-    print("-----------------------------")
+    # print(type(ascii_ls))
+    # print(type(ascii_ls[0]))
+    # print(len(ascii_ls))
+    # print(ascii_ls[0:10])
+    # print("-----------------------------")
     return ascii_ls
 
 def lowercase_words(all_cases):
@@ -239,26 +239,29 @@ def cal_word_frequency(stemmed_ascii):
 
     counts = Counter(stemmed_ascii)
 
-    labels, values = zip(*counts.items())
+    if len(counts) > 0:
+        labels, values = zip(*counts.items())
 
-    # sort your values in descending order
-    indSort = np.argsort(values)[::-1]
+        # sort your values in descending order
+        indSort = np.argsort(values)[::-1]
 
-    # rearrange your data
-    labels = np.array(labels)[indSort]
-    values = np.array(values)[indSort]
+        # rearrange your data
+        labels = np.array(labels)[indSort]
+        values = np.array(values)[indSort]
 
-    # print(ascii_ls)
-    # print(labels[0:10])
-    # print(values[0:10])
-    count = 0
-    for word, value in zip(labels, values):
-        print("{}: {}".format(word, value))
-        if count < 10:
-            count+=1
-        else:
-            break
-    return ((labels[0], values[0]))
+        # print(ascii_ls)
+        # print(labels[0:10])
+        # print(values[0:10])
+        count = 0
+        for word, value in zip(labels, values):
+            print("{}: {}".format(word, value))
+            if count < 10:
+                count+=1
+            else:
+                break
+        return ((labels[0], values[0]))
+    else:
+        return (None, 0)
 
 
 # text = get_text_from_html()

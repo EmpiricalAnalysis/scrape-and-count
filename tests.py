@@ -370,7 +370,10 @@ class TestWordCount(object):
         texts = []
         selected_tags = get_selected_tags(soup)
         get_text_from_tag_expanded(soup.html, texts, selected_tags)
-
+        # print(texts)
+        with open("texts.txt", "w") as f:
+            for text in texts:
+                f.write(text.encode('utf8'))
         print(len(texts))
 
         # print("#################################")
@@ -406,3 +409,37 @@ class TestWordCount(object):
         assert word == "python"
         assert count == 421
         assert 0
+
+    def test_ignore_invisible_tag(self):
+        # _str = '<div class="shortdescription nomobile noexcerpt noprint searchaux" style="display:none">General-purpose, high-level programming language</div>'
+        _str = '<p><div class="shortdescription nomobile noexcerpt noprint searchaux" style="display:none">General-purpose, high-level programming language</div></p>'
+        soup = BeautifulSoup(_str, 'html5lib')
+        # texts = []
+        # selected_tags = get_selected_tags(soup)
+        texts = get_screen_text(soup)
+        print("======== inside test function =========")
+        print(texts)
+        expected_list_of_text = [] # [u'Python', u'v', u't', u'e'] 
+        assert texts == expected_list_of_text
+        # assert 0 
+
+    def test_ignore_comments(self):
+        _str = '<div>      <!-- \nNewPP limit report\nParsed by mw1263\nCached time: 20190311165754--></div>'
+        soup = BeautifulSoup(_str, "html5lib")
+        texts = get_screen_text(soup)
+        print(texts)
+        assert 0
+
+def test_if_else(n):
+    if n > 0:
+        if n < 10:
+            return False
+        else:
+            return True
+    else:
+        return True
+
+print(test_if_else(13))
+
+
+            
