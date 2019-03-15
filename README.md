@@ -1,0 +1,1 @@
+make sure to have geckodriver installed on your system

@@ -1,5 +1,5 @@
+# -*- coding: utf-8 -*-
 from bs4 import BeautifulSoup
-from bs4.element import Comment
 from bs4 import NavigableString, Comment
 import urllib 
 import requests
@@ -7,7 +7,38 @@ import re
 from nltk import word_tokenize
 import string
 from unidecode import unidecode
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
+
+def get_page_content(url, dynamic=False):
+    if dynamic:
+        driver = webdriver.Firefox()
+        driver.get(url)
+        
+        try:
+            # element = WebDriverWait(driver, 10).until(
+            #     # EC.invisibility_of_element_located((By.CLASS_NAME, "interlanguage-link interwiki-af"))
+            #     # webdriver.wait().until(ExpectedConditions
+            #                 )
+            xpathstring = "//*[@class='interlanguage-link interwiki-af'][contains(@style, 'display: none')]"
+            WebDriverWait(driver,1000).until(EC.presence_of_element_located((By.XPATH,xpathstring)))
+
+            # WebDriverWait(browser,1000).until(EC.presence_of_element_located((By.XPATH,xpathstring)))
+
+            # element.getCssValue("display")
+
+            html = driver.page_source
+        finally:
+            driver.quit()
+
+        # html = driver.page_source
+        # driver.quit()
+    else:
+        html = urllib.urlopen(url).read()
+    return html
 
 def get_all_tag_names(soup):
     names = set() 
@@ -22,6 +53,8 @@ def remove_comments(soup):
 
 def get_selected_tags(soup):
     tags = get_all_tag_names(soup) #[u'code', u'h2', u'h3', u'h1', u'meta', u'table', u'label', u'noscript', u'style', u'span', u'img', u'script', u'tr', u'tbody', u'li', u'html', u'th', u'sup', u'input', u'td', u'cite', u'body', u'head', u'form', u'ol', u'link', u'abbr', u'br', u'caption', u'a', u'b', u'wbr', u'i', u'title', u'q', u'p', u'div', u'ul']
+    if "[document]" not in tags:
+        tags.add("[document]")
     ignore_tags = ['style', 'script', 'head', 'meta', 'noscript'] 
     for tag in ignore_tags:
         if tag in tags:
@@ -68,9 +101,6 @@ def get_direct_descendant_text(soup, tag):
     return immediate_descendant_text
 
 def get_text_from_tag_expanded(tag, texts, selected_tags):
-    # print(tag.name)
-    if tag.name == "[document]":
-        tag = tag.html
     if tag.name in selected_tags:
         if isinstance(tag, type(None)): 
             # print("tag {} is a NoneType object".format(tag))

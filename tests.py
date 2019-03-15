@@ -4,10 +4,13 @@ from wikipedia2 import (tokenize_words, remove_stop_words, lemmatize_words,
                         remove_unicode_chars, split_hyphenated_words,
                         lowercase_words, get_direct_descendant_text,
                         get_screen_text, get_all_tag_names, clean_and_count,
-                        get_text_from_tag_expanded, get_selected_tags)
+                        get_text_from_tag_expanded, get_selected_tags,
+                        get_page_content)
+from utils import download_pag_to_file
 import pytest
 from bs4 import BeautifulSoup
-from bs4.element import Comment
+# from bs4.element import Comment
+from bs4 import NavigableString, Comment
 import urllib
 import re
 from selenium import webdriver
@@ -363,35 +366,26 @@ class TestWordCount(object):
         # 'https://google.com'
         ])
     def test_wiki_get_tags_w_expanded_func(self, url):
-        driver = webdriver.Firefox()
-        # driver = webdriver.Chrome()
-        driver.get(url)
-        html = driver.page_source
-
-# //ul[@class='featureList'   i[@class='icon-usd']
-        # for elem in driver.find_elements_by_class_name("interlanguage-link interwiki-af"):
-        #     print(elem)
-
-        # html = urllib.urlopen(url).read()
+        html = get_page_content(url, dynamic=True)
         soup = BeautifulSoup(html, 'html5lib')
-
-        with open("prettified_wiki_python.txt", "w") as textfile:
-            textfile.write(soup.prettify().encode('utf8'))
-
         soup = remove_comments(soup)
-        # texts = soup.findAll(text=True)
 
-        # texts = get_screen_text(soup)
+
+        download_pag_to_file('prettified_wiki_python.txt', soup)
+
         texts = []
         selected_tags = get_selected_tags(soup)
-        get_text_from_tag_expanded(soup.html, texts, selected_tags)
-        # print(texts)
+        get_text_from_tag_expanded(soup, texts, selected_tags)
+
         with open("texts.txt", "w") as f:
             for text in texts:
                 f.write(text.encode('utf8'))
         print(len(texts))
 
         text_str = u" ".join(t for t in texts if t != None)
+
+        if u"Afrikaans" in text_str:
+            print("found Afrikaans!!!")
 
         ascii_text = remove_unicode_chars(text_str)
         dehyphenated_text = split_hyphenated_words(ascii_text)
