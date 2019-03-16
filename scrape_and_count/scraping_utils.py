@@ -63,37 +63,21 @@ def content_is_visible(content):
                         visible = False
     return visible
 
-# get_text_from_tag_expanded ==> scrape_visible_text
-
 def scrape_visible_text(tag, texts, selected_tags):
     if tag.name in selected_tags:
-        if isinstance(tag, type(None)): 
-            # print("tag {} is a NoneType object".format(tag))
+        if isinstance(tag, type(None)):
             pass
         elif isinstance(tag, NavigableString):
-            # print("tag {} is a NavigableString".format(tag))
             texts.append(tag + u' ')
-            # texts.append(" ")
         else:
-            # print(tag.contents)
             for child in tag.children:
-                # print(child.name)
-                # print("--------------------")
-                # print(child)
-                # print("====================")
                 if isinstance(child, NavigableString):
-                    # print("child {} is a NavigableString".format(child))
                     texts.append(child + u' ')
-                    # texts.append(" ")
                 else:
                     if content_is_visible(child):
                         if (child.name == "table") and child.has_attr("class") and ("autocollapse" in child['class']):
                             tr_to_keep = child.tbody.find("tr")
-                            # actual_list_of_text = get_screen_text(tr_to_keep)
                             scrape_visible_text(tr_to_keep, texts, selected_tags)
-                            # for elt in actual_list_of_text:
-                            #     texts.append(elt)
-                            #     texts.append(" ")
                         else:
                             if child.contents != None:
                                 scrape_visible_text(child, texts, selected_tags)

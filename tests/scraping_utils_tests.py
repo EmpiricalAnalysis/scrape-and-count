@@ -15,7 +15,13 @@ class TestScrapingUtils(object):
         soup = BeautifulSoup(html, 'html5lib')
         actual_tags = get_all_tag_names(soup)
         print(actual_tags)
-        expected_tags = set([u'code', u'h2', u'h3', u'h1', u'meta', u'table', u'label', u'noscript', u'style', u'span', u'img', u'script', u'tr', u'tbody', u'li', u'html', u'th', u'sup', u'input', u'td', u'cite', u'body', u'head', u'form', u'ol', u'link', u'abbr', u'br', u'caption', u'a', u'b', u'wbr', u'i', u'title', u'q', u'p', u'div', u'ul'])
+        expected_tags = set([u'code', u'h2', u'h3', u'h1', u'meta', u'table', 
+                             u'label', u'noscript', u'style', u'span', u'img', 
+                             u'script', u'tr', u'tbody', u'li', u'html', u'th', 
+                             u'sup', u'input', u'td', u'cite', u'body', u'head', 
+                             u'form', u'ol', u'link', u'abbr', u'br', u'caption', 
+                             u'a', u'b', u'wbr', u'i', u'title', u'q', u'p', u'div', 
+                             u'ul'])
         assert actual_tags == expected_tags
 
     def test_ignore_comments(self):
