@@ -52,5 +52,6 @@ cli.add_command(get_word_count)
 if __name__ == "__main__":
     cli()
     """
-    Example: python scrape_and_count/main.py get-word-count --dynamic True
+    Example: python scrape_and_count/main.py get-word-count
+    or python scrape_and_count/main.py get-word-count --dynamic True
     """
