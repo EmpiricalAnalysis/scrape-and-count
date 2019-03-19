@@ -24,9 +24,6 @@ def main(url, dynamic, split_hyphenated_text=True):
     print("The most common words are: ")
     print(most_common_pairs)
 
-# url = 'https://en.wikipedia.org/wiki/Python_(programming_language)'
-# if  __name__ =='__main__':main(url, dynamic=False)
-
 
 @click.group()
 def cli():
