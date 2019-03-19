@@ -6,7 +6,7 @@ from nlp_utils import (remove_unicode_chars, split_hyphenated_words, tokenize_wo
                         remove_stop_words, convert_to_lowercase, lemmatize_words,
                         cal_word_frequency) 
 
-def main(url, dynamic=True, split_hyphenated_text=True):
+def main(url, dynamic=False, split_hyphenated_text=True):
 
     html = get_page_content(url, dynamic)
     soup = BeautifulSoup(html, 'html5lib')
